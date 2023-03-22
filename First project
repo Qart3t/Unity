@@ -1,0 +1,607 @@
+  # First project
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Player movment
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+public class PlayerMovment : MonoBehaviour
+{
+
+    public float movmentspeed = 5f;
+    public Rigidbody2D rb;
+    public Vector2 movment;
+
+
+
+    void Update()
+    {
+        movment.x = Input.GetAxisRaw("Horizontal");
+        movment.y = Input.GetAxisRaw("Vertical");
+
+    }
+
+    private void FixedUpdate()
+    {
+
+        rb.MovePosition(rb.position + movment * movmentspeed * Time.fixedDeltaTime);
+        rb.rotation = 0;
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag("Slime"))
+        {
+            Destroy(gameObject);
+            PlayerWasDestroyed();
+          
+        }
+        else if (collision.collider.CompareTag("Bat"))
+        {
+            Destroy(gameObject);
+            PlayerWasDestroyed();
+        }
+    }
+
+    void PlayerWasDestroyed()
+    {
+        Batmovment.Instance.PlayerExist1(false);
+        SlimeMovment.Instance.PlayerExist1(false);
+        CameraControler.Instance.PlayerExist1(false);
+    }
+}
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Camera controler
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class CameraControler : MonoBehaviour
+{
+    public static CameraControler Instance;
+    // referencja do gracza
+    Transform player;
+    bool PlayerExist = true;
+    // pozycja offsetu kamery
+    public Vector3 offset;
+
+    // wartości graniczne kamery
+   // public float minCameraX;
+   // public float maxCameraX;
+   // public float minCameraY;
+   // public float maxCameraY;
+
+    void Awake()
+    {
+        Instance=this;
+        // pobierz referencje do gracza i Rigidbody2D
+        player = GameObject.FindGameObjectWithTag("Player1").transform;
+
+    }
+
+    // aktualizacja kamery po zaktualizowaniu pozycji gracza
+    void LateUpdate()
+    {
+        if (PlayerExist == true)
+        {
+            transform.position = new Vector3(player.position.x, player.position.y, -0.5f);
+        }
+    }
+
+    public void PlayerExist1(bool x)
+    {
+        PlayerExist = x;
+    }
+}
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Map generator
+
+using JetBrains.Annotations;
+using System.Collections;
+using System.Collections.Generic;
+using Unity.VisualScripting;
+using Unity.VisualScripting.Dependencies.NCalc;
+using UnityEngine;
+
+public class MapGenerator : MonoBehaviour
+{
+
+
+    public GameObject Wall;
+    public GameObject title;
+    public GameObject EnemySpawnPoint;
+    public GameObject Slime;
+    public GameObject Bat;
+    public Sprite grass;
+    GameObject newSlime;
+    GameObject newBat;
+    GameObject newWall;
+    //public Sprite wall;
+
+    public int Mapsizex = 25;
+    public int Mapsizey = 25;
+    int ESPx;
+    int ESPy;
+
+    Vector2 position;
+
+    Vector2 EnemySpawnPositionS;
+
+    int NumberOfEnemysS = 0;
+    int MaxNumberOfEnemyS = 100000;
+    float TimeBeetweenSpawnS = 1;
+
+    int NumberOfEnemysB = 0;
+    int MaxNumberOfEnemyB = 500000;
+    float TimeBeetweenSpawnB = 0.5f;
+
+
+    public void Start()
+    {
+        int Mapstartposx = Mapsizex / 2;
+        int Mapstartposy = Mapsizey / 2;
+
+        int ESPx = Random.Range(3, 25 - 2);
+        int ESPy = Random.Range(3, 25 - 2);
+
+        int ESPBx = Random.Range(1, 25 );
+        int ESPBy = Random.Range(1, 25 );
+
+
+        for (int i = 1; i <= Mapsizex; i++)
+        {
+            for (int j = 1; j <= Mapsizey; j++)
+            {
+                var newTile = Instantiate(title) as GameObject;
+                newTile.transform.position = new Vector3(i - Mapstartposx, j - Mapstartposy, 0);
+
+                position.x = i - Mapstartposy;
+                position.y = j - Mapstartposx;
+
+                if (i == 1 || Mapsizex == i)
+                {
+                    newWall = Instantiate(Wall, position, Quaternion.identity);
+                }
+                else if (j == 1 || Mapsizey == j)
+                {
+                    newWall = Instantiate(Wall, position, Quaternion.identity);
+                }
+                else if (i == ESPy && j == ESPx)
+                {
+
+                    EnemySpawnPoint = Instantiate(EnemySpawnPoint, position, Quaternion.identity);
+                    EnemySpawnPositionS.x = i - Mapstartposy;
+                    EnemySpawnPositionS.y = j - Mapstartposx;
+                }
+                else
+                {
+                    newTile.GetComponent<SpriteRenderer>().sprite = grass;
+                }
+
+
+            }
+        }
+    }
+
+    public void Update()
+    {
+    }
+
+    public void FixedUpdate()
+    {
+        if (TimeBeetweenSpawnS <= 0)
+        {
+            if (NumberOfEnemysS < MaxNumberOfEnemyS)
+            {
+                newSlime = Instantiate(Slime, EnemySpawnPositionS, Quaternion.identity);
+                NumberOfEnemysS++;
+                TimeBeetweenSpawnS = 1;
+            }
+        }
+        else
+        {
+            TimeBeetweenSpawnS = TimeBeetweenSpawnS - Time.fixedDeltaTime;
+        }
+
+        Vector2 positionB;
+        int Mapstartposx = Mapsizex / 2;
+        int Mapstartposy = Mapsizey / 2;
+
+        if (TimeBeetweenSpawnB <= 0)
+        {
+            if (NumberOfEnemysB < MaxNumberOfEnemyB)
+            {
+                int POM = Random.Range(1, 4);
+                if (POM == 1)
+                {
+                    int i = 2;
+                    int j = Random.Range(1, 25);
+                    positionB.x = i - Mapstartposy;
+                    positionB.y = j - Mapstartposx;
+                    newBat = Instantiate(Bat, positionB, Quaternion.identity);
+                    NumberOfEnemysB++;
+                    TimeBeetweenSpawnB = 0.5f;
+                }
+                else if (POM == 2)
+                {
+                    int i = 24;
+                    int j = Random.Range(1, 25);
+                    positionB.x = i - Mapstartposy;
+                    positionB.y = j - Mapstartposx;
+                    newBat = Instantiate(Bat, positionB, Quaternion.identity);
+                    NumberOfEnemysB++;
+                    TimeBeetweenSpawnB = 0.5f;
+                }
+                else if (POM == 3)
+                {
+                    int j = 2;
+                    int i = Random.Range(1, 25);
+                    positionB.x = i - Mapstartposy;
+                    positionB.y = j - Mapstartposx;
+                    newBat = Instantiate(Bat, positionB, Quaternion.identity);
+                    NumberOfEnemysB++;
+                    TimeBeetweenSpawnB = 0.5f;
+                }
+                else if (POM == 4)
+                {
+                    int j = 24;
+                    int i = Random.Range(1, 25);
+                    positionB.x = i - Mapstartposy;
+                    positionB.y = j - Mapstartposx;
+                    newBat = Instantiate(Bat, positionB, Quaternion.identity);
+                    NumberOfEnemysB++;
+                    TimeBeetweenSpawnB = 0.5f;
+                }
+            }
+        }
+        else
+        {
+            TimeBeetweenSpawnB = TimeBeetweenSpawnB - Time.fixedDeltaTime;
+        }
+
+
+    }
+}
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Shoot
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Shoot : MonoBehaviour
+{
+    public Transform Gun;
+    public Transform ShootPoint;
+    public GameObject Bullet;
+
+    Vector2 direction;
+    float BulletSpeed=5;
+    float FireRate = 20;
+    float ReloadTime;
+    int ammo = 0;
+    int magazine=30;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        direction = mousePos - (Vector2)Gun.position;
+        FaceMouse();
+
+        if(Input.GetMouseButton(0))
+        {
+            if(Time.time>ReloadTime)
+            {
+                ReloadTime = Time.time +1 / FireRate;
+                ammo++;
+                if(ammo<=magazine)
+                {
+                    shoot();
+                }
+                else
+                {
+                    ammo = 0;
+                    StartCoroutine(waiter());
+                }
+            }
+           
+        }
+    }
+
+    void FaceMouse()
+    {
+        Gun.transform.right = direction;
+    }
+
+    void shoot()
+    {
+        GameObject BulletIns = Instantiate(Bullet, ShootPoint.position, ShootPoint.rotation);
+        BulletIns.GetComponent<Rigidbody2D>().AddForce(BulletIns.transform.right * BulletSpeed);
+    }
+
+
+    IEnumerator waiter()
+    {
+        yield return new WaitForSeconds(5);
+    }
+
+}
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Bullet
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Bullet : MonoBehaviour
+{
+    public Rigidbody2D rigitbody;
+
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag("Ściana"))
+        {
+            Destroy(gameObject);
+        }
+        else if (collision.collider.CompareTag("Slime"))
+        {
+            Destroy(gameObject);
+        }
+        else if (collision.collider.CompareTag("Bat"))
+        {
+            Destroy(gameObject);
+        }
+    }
+}
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Resource counter
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class ResourceCounter : MonoBehaviour
+{
+    public static ResourceCounter Instance;
+
+    public Text cointText;
+    public Text TotalcointText;
+
+    int coin = 0;
+    int Totalcoin = 0;
+
+    public void Awake()
+    {
+        Instance = this; 
+    }
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        Totalcoin = PlayerPrefs.GetInt("Totalcoin", 0);
+        cointText.text = "Coins: " + coin.ToString();
+        TotalcointText.text = "Total coins: " + Totalcoin.ToString();
+    }
+
+    // Update is called once per frame
+    public void AddPoints(int HowManyPoints)
+    {
+        coin += HowManyPoints;
+        cointText.text = "Coins: " + coin.ToString();
+        PlayerPrefs.SetInt("Totalcoin", Totalcoin + coin);
+    }
+}
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Bat movment
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Batmovment : MonoBehaviour
+{
+    public static Batmovment Instance;
+    // referencje do komponentów
+    private Transform player;
+    private Rigidbody2D rb2D;
+
+
+    bool PlayerExist = true;
+
+
+    int Bathealth = 2;
+    int CoinsForKillBat = 5;
+
+    // zmienne stanu
+    private enum EnemyState { Idle, Chasing };
+    private EnemyState currentState;
+
+    // odległość, w jakiej przeciwnik zaczyna gonić gracza
+    public float chaseDistance = 10000f;
+
+    // prędkość przeciwnika
+    private float speed = 5f;
+
+    void Awake()
+    {
+        Instance = this;
+        // pobierz referencje do gracza i Rigidbody2D
+        player = GameObject.FindGameObjectWithTag("Player1").transform;
+        rb2D = GetComponent<Rigidbody2D>();
+
+        // ustaw stan początkowy na "Idle"
+        currentState = EnemyState.Idle;
+    }
+
+    void Update()
+    {
+        
+                // oblicz odległość między przeciwnikiem a graczem
+                float distanceToPlayer = Vector2.Distance(transform.position, player.position);
+
+            // zmień stan na "Chasing", jeśli gracz jest wystarczająco blisko
+            if (distanceToPlayer < chaseDistance)
+            {
+                currentState = EnemyState.Chasing;
+            }
+
+            // wykonaj akcje zależne od stanu
+            switch (currentState)
+            {
+                case EnemyState.Idle:
+                    // przeciwnik nie robi nic
+                    break;
+
+                case EnemyState.Chasing:
+                // przeciwnik goni gracza
+                
+                    Vector2 direction = (player.position - transform.position).normalized;
+                    rb2D.velocity = direction * speed;
+                
+               
+                    currentState = EnemyState.Idle;
+                
+                break;
+            }
+        
+     
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag("bullet"))
+        {
+            Bathealth--;
+            if (Bathealth == 0)
+            {
+
+                Destroy(gameObject);
+                ResourceCounter.Instance.AddPoints(CoinsForKillBat);
+            }
+        }
+    }
+
+
+    public void PlayerExist1(bool x)
+    {
+        PlayerExist = x;
+    }
+}
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Slime movment
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
+using UnityEngine;
+using UnityEngine.AI;
+
+public class SlimeMovment : MonoBehaviour
+{
+    public static SlimeMovment Instance;
+    // referencje do komponentów
+    private Transform player;
+    private Rigidbody2D rb2D;
+    public SliderBehavior Healthbar;
+    int MaxSlimeHealth = 5;
+    int SlimeHealth;
+    int CoinsForKillSlime = 10;
+    // zmienne stanu
+    private enum EnemyState { Idle, Chasing };
+    private EnemyState currentState;
+    bool PlayerExist = true;
+    // odległość, w jakiej przeciwnik zaczyna gonić gracza
+    float chaseDistance = 10000f;
+
+    // prędkość przeciwnika
+    private float speed = 3f;
+
+    void Awake()
+    {
+        Instance = this;
+        // pobierz referencje do gracza i Rigidbody2D
+        player = GameObject.FindGameObjectWithTag("Player1").transform;
+        rb2D = GetComponent<Rigidbody2D>();
+
+        // ustaw stan początkowy na "Idle"
+        currentState = EnemyState.Idle;
+    }
+
+    private void Start()
+    {
+        SlimeHealth = MaxSlimeHealth;
+        Healthbar.SetHealth(SlimeHealth, MaxSlimeHealth);
+    }
+
+    void Update()
+    {
+        
+            // oblicz odległość między przeciwnikiem a graczem
+            float distanceToPlayer = Vector2.Distance(transform.position, player.position);
+
+            // zmień stan na "Chasing", jeśli gracz jest wystarczająco blisko
+            if (distanceToPlayer < chaseDistance)
+            {
+                currentState = EnemyState.Chasing;
+            }
+
+            // wykonaj akcje zależne od stanu
+            switch (currentState)
+            {
+                case EnemyState.Idle:
+                    // przeciwnik nie robi nic
+                    break;
+
+                case EnemyState.Chasing:
+                    // przeciwnik goni gracza
+                    
+                        Vector2 direction = (player.position - transform.position).normalized;
+                        rb2D.velocity = direction * speed;
+                    
+                   
+                    break;
+            }
+        
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.collider.CompareTag("bullet"))
+        {
+            SlimeHealth--;
+            if (SlimeHealth == 0)
+            {
+               
+             Destroy(gameObject);
+             ResourceCounter.Instance.AddPoints(CoinsForKillSlime);
+                
+            }
+        }
+    }
+
+    public void PlayerExist1(bool x)
+    {
+        PlayerExist = x;
+    }
+}
